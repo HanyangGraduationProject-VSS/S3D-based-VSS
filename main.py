@@ -58,9 +58,9 @@ class S3DModel:
         list_frames = [f for f in os.listdir(video_frame_dir) if os.path.isfile(os.path.join(video_frame_dir, f))]
         list_frames.sort()
 
-        for snippet in make_snippets(video_frame_dir, list_frames, 12):
+        for snippet in S3DModel.make_snippets(video_frame_dir, list_frames, 13):
             clip = transform(snippet)
-
+            print(clip.shape)
             with torch.no_grad():
                 if self.device != 'cpu':
                     logits,feature_map = self.model(clip.cuda()).cpu()
@@ -100,8 +100,8 @@ def main():
         video_frame_dir = path_join(path_sample, video_dir)
         print(f"#{video_idx} {video_dir}")
         for feature_map, logits in model.extract_featuremap_logits(video_frame_dir):
-            save_feature_map(feature_map)
-            save_logits(logits)
+            save_feature_map(feature_map, video_dir)
+            save_logits(logits, video_dir)
 
 def transform(snippet):
     ''' stack & noralization '''

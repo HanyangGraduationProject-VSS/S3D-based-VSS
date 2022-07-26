@@ -38,38 +38,51 @@ class S3DModel:
         torch.backends.cudnn.benchmark = False
         self.model.eval()
 
-    def predict(self, video_frame_dir):  
-        list_frames = [f for f in os.listdir(video_frame_dir) if os.path.isfile(os.path.join(video_frame_dir, f))]
-        list_frames.sort()
-
-        # read all the frames of sample clip
+    @staticmethod
+    def make_snippets(video_frame_dir, list_frames, n_frames):
+        # read every `n_frames` the frames of sample clip
+        total_snippet_cnt = len(list_frames) - n_frames + 1
         snippet = []
-        for frame in list_frames:
+        for frame in list_frames[:n_frames-1]:
             img = cv2.imread(os.path.join(video_frame_dir, frame))
             img = img[...,::-1]
             snippet.append(img)
+        for snippet_frame in list_frames[n_frames-1:]:
+            img = cv2.imread(os.path.join(video_frame_dir, snippet_frame))
+            img = img[...,::-1]
+            snippet.append(img)
+            yield snippet
+            snippet = snippet[1:]
 
-        clip = transform(snippet)
+    def extract_featuremap_logits(self, video_frame_dir):  
+        list_frames = [f for f in os.listdir(video_frame_dir) if os.path.isfile(os.path.join(video_frame_dir, f))]
+        list_frames.sort()
 
-        with torch.no_grad():
-            if self.device != 'cpu':
-                logits,feature_map = self.model(clip.cuda()).cpu().data[0]
-            else:
-                logits,feature_map = self.model(clip).data[0]
+        for snippet in make_snippets(video_frame_dir, list_frames, 12):
+            clip = transform(snippet)
 
-        preds = torch.softmax(logits, 0).numpy()
-        sorted_indices = np.argsort(preds)[::-1][:8]
+            with torch.no_grad():
+                if self.device != 'cpu':
+                    logits,feature_map = self.model(clip.cuda()).cpu()
+                else:
+                    logits,feature_map = self.model(clip)
+                logits = logits.data[0]
 
-        print ('\nTop 5 classes ... with probability')
-        for idx in sorted_indices:
-            print (self.class_names[idx], '...', preds[idx])
-        print('=========== logit ================')
-        print(f'{logits}')
-        print('=========== ')
-        print(f'{feature_map}')
-        
-        return sorted_indices
+            preds = torch.softmax(logits, 0)
 
+            
+            print('=========== logit ================')
+            print(f'{preds}')
+            print('=========== ')
+            print(f'{feature_map}')
+            
+            yield feature_map, preds
+
+def save_feature_map(feature_map, video_key):
+    pass
+def save_logits(feature_map, video_key):
+    pass
+    
 def main():
     ''' Output the top 5 Kinetics classes predicted by the model '''
     path_sample = path_join('.', 'frames')
@@ -86,7 +99,9 @@ def main():
     for video_idx, video_dir in enumerate(video_dirs, 1):
         video_frame_dir = path_join(path_sample, video_dir)
         print(f"#{video_idx} {video_dir}")
-        model.predict(video_frame_dir)
+        for feature_map, logits in model.extract_featuremap_logits(video_frame_dir):
+            save_feature_map(feature_map)
+            save_logits(logits)
 
 def transform(snippet):
     ''' stack & noralization '''

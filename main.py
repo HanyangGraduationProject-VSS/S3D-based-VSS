@@ -38,7 +38,7 @@ class S3DModel:
         torch.backends.cudnn.benchmark = False
         self.model.eval()
 
-    def predict(self, video_frame_dir):
+    def predict(self, video_frame_dir):  
         list_frames = [f for f in os.listdir(video_frame_dir) if os.path.isfile(os.path.join(video_frame_dir, f))]
         list_frames.sort()
 
@@ -53,16 +53,21 @@ class S3DModel:
 
         with torch.no_grad():
             if self.device != 'cpu':
-                logits = self.model(clip.cuda()).cpu().data[0]
+                logits,feature_map = self.model(clip.cuda()).cpu().data[0]
             else:
-                logits = self.model(clip).data[0]
+                logits,feature_map = self.model(clip).data[0]
 
         preds = torch.softmax(logits, 0).numpy()
-        sorted_indices = np.argsort(preds)[::-1][:5]
+        sorted_indices = np.argsort(preds)[::-1][:8]
 
         print ('\nTop 5 classes ... with probability')
         for idx in sorted_indices:
             print (self.class_names[idx], '...', preds[idx])
+        print('=========== logit ================')
+        print(f'{logits}')
+        print('=========== ')
+        print(f'{feature_map}')
+        
         return sorted_indices
 
 def main():
@@ -76,6 +81,8 @@ def main():
     model = S3DModel(weight_file_path, class_names)
 
     video_dirs = (dir for dir in os.listdir(path_sample) if os.path.isdir(os.path.join(path_sample, dir)))
+    
+    # sample,,  sampel_1 sample_2 sampe_3
     for video_idx, video_dir in enumerate(video_dirs, 1):
         video_frame_dir = path_join(path_sample, video_dir)
         print(f"#{video_idx} {video_dir}")

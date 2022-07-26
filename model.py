@@ -28,10 +28,11 @@ class S3D(nn.Module):
     def forward(self, x):
         y = self.base(x)
         y = F.avg_pool3d(y, (2, y.size(3), y.size(4)), stride=1)
+        feature_map = y
         y = self.fc(y)
         y = y.view(y.size(0), y.size(1), y.size(2))
         logits = torch.mean(y, 2)
-        return logits
+        return logits, feature_map
 
 class BasicConv3d(nn.Module):
     def __init__(self, in_planes, out_planes, kernel_size, stride, padding=0):

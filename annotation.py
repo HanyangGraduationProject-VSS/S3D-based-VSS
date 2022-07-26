@@ -117,6 +117,30 @@ def show_segment_distributions(annotation_dirpath, prefix):
     segment_df = pd.read_csv(path_join(annotation_dirpath, f"{prefix}_segments.csv"))
     print(segment_df['label'].value_counts().head(20))
 
+def convert_seconds_to_frame_indices_in_segments(to_fps = 8.0, segment_df = None, df = None):
+    if segment_df is None:
+        segment_df = pd.read_csv(path_join('annotations', 'annotation_data_segments.csv'))
+    if df is None:
+        df = pd.read_csv(path_join('annotations', 'annotation_data_training.csv'))
+    elif type(df) == str:
+        if df == 'train':
+            df = pd.read_csv(path_join('annotations', 'annotation_data_training.csv'))
+        elif df == 'valid':
+            df = pd.read_csv(path_join('annotations', 'annotation_data_validation.csv'))
+    
+    new_df =  pd.DataFrame((
+        (*v[:-2], *s) for v in df.values for s in segment_df.iloc[v[-2]:v[-2]+v[-1]].values
+    ), columns=list(df.columns[:-2])+list(segment_df.columns))
+
+    new_df["start_frame"] = new_df["start_time"] * new_df["fps"] / to_fps
+    new_df["end_frame"] = new_df["end_time"] * new_df["fps"] / to_fps
+    new_df["start_frame"] = new_df["start_frame"].apply(round, int)
+    new_df["end_frame"] = new_df["end_frame"].apply(round, int)
+
+    new_df.set_index("video_id", inplace=True)
+
+    return new_df
+
 def main():
     default_annotation_dirpath = path_join('.', 'annotations')
     default_annotation_path = path_join('.', 'annotations', 'activity_net.v1-3.min.json')

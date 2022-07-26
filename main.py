@@ -4,6 +4,7 @@ import cv2
 import torch
 from os.path import join as path_join
 from model import S3D
+import pandas as pd
 
 class S3DModel:
     def __init__(self, weight_file_path, class_names, device = None, num_class = 400):
@@ -78,8 +79,37 @@ class S3DModel:
             
             yield feature_map, preds
 
+
+def torch_save_file(content,path):
+    with open(path, 'w') as file:
+        torch.save(content, path)
+
+
+def save_feature_map(feature_map, video_key, frame_idx):
+    dirpath = path_join('.', 'feature_maps', video_key)
+    if not os.path.exists(dirpath):
+        os.mkdir(dirpath)
+    frame_idx_ext = str(frame_idx) + '.pt'
+    path = path_join(dirpath, frame_idx_ext)
+    torch_save_file(feature_map,path)
+
+
+def save_logits(logits, video_key, frame_idx):
+    dirpath = path_join('.', 'logits', video_key)
+    if not os.path.exists(dirpath):
+        os.mkdir(dirpath)
+    frame_idx_ext = str(frame_idx) + '.pt'
+    path = path_join(dirpath, frame_idx_ext)
+    f = open(path, 'w')
+    torch.save(logits, path)
+    f.close()
+
+def save_feature_map_and_logits(video_key: str, df: pd.DataFrame):
+    df.to_parquet(path_join('.', 'features_logits', f'{video_key}.parquet'), compression='gzip')
+
 def save_feature_map(feature_map, video_key):
     pass
+
 def save_logits(feature_map, video_key):
     pass
     
@@ -99,9 +129,10 @@ def main():
     for video_idx, video_dir in enumerate(video_dirs, 1):
         video_frame_dir = path_join(path_sample, video_dir)
         print(f"#{video_idx} {video_dir}")
-        for feature_map, logits in model.extract_featuremap_logits(video_frame_dir):
-            save_feature_map(feature_map, video_dir)
-            save_logits(logits, video_dir)
+        df = pd.DataFrame(columns=['frame_idx', 'feature_map', 'logits'])
+        for frame_idx, (feature_map, logits) in enumerate(model.extract_featuremap_logits(video_frame_dir)):
+            df.loc[frame_idx] = [frame_idx, feature_map.numpy().tobytes(), logits.numpy().tobytes()]
+        save_feature_map_and_logits(video_dir, df)
 
 def transform(snippet):
     ''' stack & noralization '''

@@ -64,7 +64,7 @@
 - To deactivate the virtual environment
   - `deactivate`
 - To run the model
-  - `python main.py`
+  - `python features_logits_extractor.py`
 
 ## To build annotated csvs from annotations
 
@@ -77,10 +77,7 @@
 ## To run the S3D model with pretrained weights to classify a video
 
 1. Convert a video file into several frames
-- `python video2images.py --fps 5 --img_size 224`
+- `python video2images.py`
 
 2. Run the S3D model
-- `python main.py`
-
-## To create activity-net 1.3 annotation csvs
-- `python annotation.py`
+- `python features_logits_extractor.py`

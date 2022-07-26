@@ -6,7 +6,7 @@ from os.path import join as path_join
 from model import S3D
 import pandas as pd
 
-class S3DModel:
+class S3DInference:
     def __init__(self, weight_file_path, class_names, device = None, num_class = 400):
         self.weight_file_path = weight_file_path
         self.class_names = class_names
@@ -42,7 +42,6 @@ class S3DModel:
     @staticmethod
     def make_snippets(video_frame_dir, list_frames, n_frames):
         # read every `n_frames` the frames of sample clip
-        total_snippet_cnt = len(list_frames) - n_frames + 1
         snippet = []
         for frame in list_frames[:n_frames-1]:
             img = cv2.imread(os.path.join(video_frame_dir, frame))
@@ -54,13 +53,20 @@ class S3DModel:
             snippet.append(img)
             yield snippet
             snippet = snippet[1:]
+    @staticmethod
+    def transform(snippet):
+        ''' stack & noralization '''
+        snippet = np.concatenate(snippet, axis=-1)
+        snippet = torch.from_numpy(snippet).permute(2, 0, 1).contiguous().float()
+        snippet = snippet.mul_(2.).sub_(255).div(255)
+        return snippet.view(1,-1,3,snippet.size(1),snippet.size(2)).permute(0,2,1,3,4)
 
     def extract_featuremap_logits(self, video_frame_dir):  
         list_frames = [f for f in os.listdir(video_frame_dir) if os.path.isfile(os.path.join(video_frame_dir, f))]
         list_frames.sort()
 
-        for snippet in S3DModel.make_snippets(video_frame_dir, list_frames, 13):
-            clip = transform(snippet)
+        for snippet in S3DInference.make_snippets(video_frame_dir, list_frames, 13):
+            clip = S3DInference.transform(snippet)
             with torch.no_grad():
                 if self.device != 'cpu':
                     logits,feature_map = self.model(clip.cuda()).cpu()
@@ -72,41 +78,11 @@ class S3DModel:
             yield feature_map, preds
 
 
-def torch_save_file(content,path):
-    with open(path, 'w') as file:
-        torch.save(content, path)
-
-
-def save_feature_map(feature_map, video_key, frame_idx):
-    dirpath = path_join('.', 'feature_maps', video_key)
-    if not os.path.exists(dirpath):
-        os.mkdir(dirpath)
-    frame_idx_ext = str(frame_idx) + '.pt'
-    path = path_join(dirpath, frame_idx_ext)
-    torch_save_file(feature_map,path)
-
-
-def save_logits(logits, video_key, frame_idx):
-    dirpath = path_join('.', 'logits', video_key)
-    if not os.path.exists(dirpath):
-        os.mkdir(dirpath)
-    frame_idx_ext = str(frame_idx) + '.pt'
-    path = path_join(dirpath, frame_idx_ext)
-    f = open(path, 'w')
-    torch.save(logits, path)
-    f.close()
-
 def save_feature_map_and_logits(video_key: str, df: pd.DataFrame):
     dirpath = path_join('.', 'features_logits')
     os.makedirs(dirpath, exist_ok = True)
     df.to_parquet(path_join('.', 'features_logits', f'{video_key}.parquet'), compression='gzip')
 
-def save_feature_map(feature_map, video_key):
-    pass
-
-def save_logits(feature_map, video_key):
-    pass
-    
 def main():
     ''' Output the top 5 Kinetics classes predicted by the model '''
     path_sample = path_join('.', 'frames')
@@ -115,7 +91,7 @@ def main():
     class_names = [c.strip() for c in open(label_path)]
     weight_file_path = path_join('.', 'pretrained_model', 'S3D_kinetics400.pt')
 
-    model = S3DModel(weight_file_path, class_names)
+    model = S3DInference(weight_file_path, class_names)
 
     video_dirs = (dir for dir in os.listdir(path_sample)
                   if os.path.isdir(os.path.join(path_sample, dir)))
@@ -127,13 +103,7 @@ def main():
             df.loc[frame_idx] = [frame_idx, feature_map.numpy().tobytes(), logits.numpy().tobytes()]
         save_feature_map_and_logits(video_dir, df)
 
-def transform(snippet):
-    ''' stack & noralization '''
-    snippet = np.concatenate(snippet, axis=-1)
-    snippet = torch.from_numpy(snippet).permute(2, 0, 1).contiguous().float()
-    snippet = snippet.mul_(2.).sub_(255).div(255)
 
-    return snippet.view(1,-1,3,snippet.size(1),snippet.size(2)).permute(0,2,1,3,4)
 
 if __name__ == '__main__':
     main()

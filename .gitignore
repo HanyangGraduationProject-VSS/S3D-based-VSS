@@ -4,3 +4,5 @@ __pycache__
 *.mp4
 *.mkv
 *.webm
+frames/*
+!frames/sample

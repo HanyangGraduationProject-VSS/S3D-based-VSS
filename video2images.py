@@ -10,8 +10,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--videoFolder', type=str, default="videos",
                     help='full path of path of folder containing videos')
 parser.add_argument('--outFolder', type=str, default="", help='output folder to store images')
-parser.add_argument('--fps', type=int, default=0, help='frames to output per second.')
-parser.add_argument('--img_size', type=int, default=False, help='frames to output per second.')
+parser.add_argument('--fps', type=int, default=8, help='frames to output per second.')
+parser.add_argument('--img_size', type=int, default=224, help='frames to output per second.')
 
 class VideoToImages:
     def __init__(self, config):

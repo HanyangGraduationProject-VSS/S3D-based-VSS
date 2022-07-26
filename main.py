@@ -61,22 +61,14 @@ class S3DModel:
 
         for snippet in S3DModel.make_snippets(video_frame_dir, list_frames, 13):
             clip = transform(snippet)
-            print(clip.shape)
             with torch.no_grad():
                 if self.device != 'cpu':
                     logits,feature_map = self.model(clip.cuda()).cpu()
                 else:
                     logits,feature_map = self.model(clip)
                 logits = logits.data[0]
-
             preds = torch.softmax(logits, 0)
 
-            
-            print('=========== logit ================')
-            print(f'{preds}')
-            print('=========== ')
-            print(f'{feature_map}')
-            
             yield feature_map, preds
 
 
@@ -105,6 +97,8 @@ def save_logits(logits, video_key, frame_idx):
     f.close()
 
 def save_feature_map_and_logits(video_key: str, df: pd.DataFrame):
+    dirpath = path_join('.', 'features_logits')
+    os.makedirs(dirpath, exist_ok = True)
     df.to_parquet(path_join('.', 'features_logits', f'{video_key}.parquet'), compression='gzip')
 
 def save_feature_map(feature_map, video_key):
@@ -123,12 +117,11 @@ def main():
 
     model = S3DModel(weight_file_path, class_names)
 
-    video_dirs = (dir for dir in os.listdir(path_sample) if os.path.isdir(os.path.join(path_sample, dir)))
-    
-    # sample,,  sampel_1 sample_2 sampe_3
+    video_dirs = (dir for dir in os.listdir(path_sample)
+                  if os.path.isdir(os.path.join(path_sample, dir)))
+
     for video_idx, video_dir in enumerate(video_dirs, 1):
         video_frame_dir = path_join(path_sample, video_dir)
-        print(f"#{video_idx} {video_dir}")
         df = pd.DataFrame(columns=['frame_idx', 'feature_map', 'logits'])
         for frame_idx, (feature_map, logits) in enumerate(model.extract_featuremap_logits(video_frame_dir)):
             df.loc[frame_idx] = [frame_idx, feature_map.numpy().tobytes(), logits.numpy().tobytes()]

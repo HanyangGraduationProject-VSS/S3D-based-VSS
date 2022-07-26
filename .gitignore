@@ -6,3 +6,5 @@ __pycache__
 *.webm
 frames/*
 !frames/sample
+features_logits/*
+!features_logits/sample.parquet

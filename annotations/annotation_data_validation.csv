@@ -1,4 +1,4 @@
-,duration,fps,total_frames,width,height,url,annotation_record_id,num_segments
+video_id,duration,fps,total_frames,width,height,url,annotation_record_id,num_segments
 0,126.178,25.0,3153,1920,1080,https://www.youtube.com/watch?v=JDg--pjY5gg,1,1
 1,184.599,29.97002997002997,5531,854,480,https://www.youtube.com/watch?v=PLek2e8NlKc,9,2
 2,232.432,29.97002997002997,6966,320,240,https://www.youtube.com/watch?v=0n3VRoYYYGU,12,1

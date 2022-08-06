@@ -30,7 +30,7 @@ class S3DInference:
                 else:
                     print (' name? ' + name)
 
-            print (' loaded')
+            print (f' loaded powered by {self.device}')
         else:
             print ('weight file?')
 
@@ -69,9 +69,11 @@ class S3DInference:
             clip = S3DInference.transform(snippet)
             with torch.no_grad():
                 if self.device != 'cpu':
-                    logits,feature_map = self.model(clip.cuda()).cpu()
+                    logits, feature_map = self.model(clip.cuda())
+                    logits = logits.cpu()
+                    feature_map = feature_map.cpu()
                 else:
-                    logits,feature_map = self.model(clip)
+                    logits, feature_map = self.model(clip)
                 logits = logits.data[0]
             preds = torch.softmax(logits, 0)
 

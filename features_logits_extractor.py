@@ -1,10 +1,21 @@
+import argparse
 import os
-import numpy as np
-import cv2
-import torch
 from os.path import join as path_join
-from model import S3D
+from typing import Generator
+
+import cv2
+import numpy as np
 import pandas as pd
+import torch
+from tqdm import tqdm
+from model import S3D
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--frameFolder', type=str, default="", help='Full path of the folder containing per-video frames directories (Default: "./frames")')
+parser.add_argument('--outFolder', type=str, default="", help='Output folder to store extracted parquet files (Default: "./features_logits")')
+parser.add_argument('--window_size', type=int, default=13, help='The number of frames to feed the model (Default: 13)')
+parser.add_argument('--parallel', type=bool, default=False, help='[Experimental!] Use parallel processing (Default: False)')
+parser.add_argument('--parallel_jobs', type=int, default=8, help='# of jobs to do parallel processing (Default: 8)')
 
 class S3DInference:
     def __init__(self, weight_file_path, class_names, device = None, num_class = 400):
@@ -53,6 +64,7 @@ class S3DInference:
             snippet.append(img)
             yield snippet
             snippet = snippet[1:]
+
     @staticmethod
     def transform(snippet):
         ''' stack & noralization '''
@@ -61,11 +73,11 @@ class S3DInference:
         snippet = snippet.mul_(2.).sub_(255).div(255)
         return snippet.view(1,-1,3,snippet.size(1),snippet.size(2)).permute(0,2,1,3,4)
 
-    def extract_featuremap_logits(self, video_frame_dir):  
+    def extract_featuremap_logits(self, video_frame_dir, window_size):
         list_frames = [f for f in os.listdir(video_frame_dir) if os.path.isfile(os.path.join(video_frame_dir, f))]
         list_frames.sort()
 
-        for snippet in S3DInference.make_snippets(video_frame_dir, list_frames, 13):
+        for snippet in S3DInference.make_snippets(video_frame_dir, list_frames, window_size):
             clip = S3DInference.transform(snippet)
             with torch.no_grad():
                 if self.device != 'cpu':
@@ -79,32 +91,81 @@ class S3DInference:
 
             yield feature_map, preds
 
+def build_extractions_to_dataframe(extractor: Generator):
+    df = pd.DataFrame(columns=['frame_idx', 'feature_map', 'logits'])
+    for frame_idx, (feature_map, logits) in enumerate(extractor):
+        df.loc[frame_idx] = [frame_idx, feature_map.numpy().tobytes(), logits.numpy().tobytes()]
+    return df
 
-def save_feature_map_and_logits(video_key: str, df: pd.DataFrame):
-    dirpath = path_join('.', 'features_logits')
-    os.makedirs(dirpath, exist_ok = True)
-    df.to_parquet(path_join('.', 'features_logits', f'{video_key}.parquet'), compression='gzip')
+def save_feature_map_and_logits(dir_path, video_key: str, df: pd.DataFrame):
+    df.to_parquet(path_join(dir_path, f'{video_key}.parquet'), compression='gzip')
+
+def save_and_build(video_idx, video_key, frames_dir, out_dir, window_size, model, parallel = True):
+    video_frame_dir = path_join(frames_dir, video_key)
+    total_frames = len(os.listdir(video_frame_dir))
+    if total_frames < window_size:
+        print(f'{video_idx:5d}: {video_key} has less than {window_size} frames ({total_frames})')
+        return
+
+    extracted_frames = total_frames - window_size + 1
+    extractor = model.extract_featuremap_logits(video_frame_dir, window_size)
+    if not parallel:
+        extractor = tqdm(extractor, total = extracted_frames)
+
+    print(f'{video_idx:5d}: {video_key} is being extracted')
+    df = build_extractions_to_dataframe(extractor)
+    save_feature_map_and_logits(out_dir, video_key, df)
 
 def main():
     ''' Output the top 5 Kinetics classes predicted by the model '''
-    path_sample = path_join('.', 'frames')
     label_path = path_join('.', 'label_map.txt')
-    
     class_names = [c.strip() for c in open(label_path)]
     weight_file_path = path_join('.', 'pretrained_model', 'S3D_kinetics400.pt')
 
+    args = parser.parse_args()
+
+    frames_dir = args.frameFolder or path_join('.', 'frames')
+    if args.frameFolder and not os.path.exists(args.frameFolder):
+        print('frame folder does not exist')
+        print(args.frameFolder)
+        return
+    
+    out_dir = args.outFolder or path_join('.', 'features_logits')
+    if args.outFolder and not os.path.exists(args.frameFolder):
+        print('out folder does not exist')
+        print(args.outFolder)
+        return
+    
+    window_size = args.window_size
+    if args.window_size < 13:
+        print('window size must be at least 13')
+        return
+
     model = S3DInference(weight_file_path, class_names)
 
-    video_dirs = (dir for dir in os.listdir(path_sample)
-                  if os.path.isdir(os.path.join(path_sample, dir)))
+    already_done_videos = set(filename[:-len(".parquet")] for filename in os.listdir(out_dir))
+    video_keys = [dir for dir in os.listdir(frames_dir)
+                  if os.path.isdir(os.path.join(frames_dir, dir))
+                  if dir not in already_done_videos]
+    
+    for video_key in already_done_videos:
+        print(f'{video_key} already exists')
 
-    for video_idx, video_dir in enumerate(video_dirs, 1):
-        video_frame_dir = path_join(path_sample, video_dir)
-        df = pd.DataFrame(columns=['frame_idx', 'feature_map', 'logits'])
-        for frame_idx, (feature_map, logits) in enumerate(model.extract_featuremap_logits(video_frame_dir)):
-            df.loc[frame_idx] = [frame_idx, feature_map.numpy().tobytes(), logits.numpy().tobytes()]
-        save_feature_map_and_logits(video_dir, df)
+    tasks = ({
+        'video_idx' : video_idx,
+        'video_key' : video_key,
+        'frames_dir' : frames_dir,
+        'out_dir' : out_dir,
+        'window_size' : window_size,
+        'model' : model,
+    } for video_idx, video_key in enumerate(video_keys, 1))
 
+    if args.parallel and args.parallel_jobs >= 1:
+        from pqdm.processes import pqdm
+        pqdm(tasks, save_and_build, n_jobs = args.parallel_jobs, argument_type='kwargs')
+    else:
+        for task in tasks:
+            save_and_build(**task, parallel = False)
 
 
 if __name__ == '__main__':

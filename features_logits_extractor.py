@@ -46,7 +46,7 @@ class S3DInference:
             print ('weight file?')
 
         if self.device != 'cpu':
-            self.model = self.model.cuda()
+            self.model = self.model.to(self.device)
         torch.backends.cudnn.benchmark = False
         self.model.eval()
 
@@ -81,7 +81,7 @@ class S3DInference:
             clip = S3DInference.transform(snippet)
             with torch.no_grad():
                 if self.device != 'cpu':
-                    logits, feature_map = self.model(clip.cuda())
+                    logits, feature_map = self.model(clip.to(self.device))
                     logits = logits.cpu()
                     feature_map = feature_map.cpu()
                 else:
@@ -110,11 +110,12 @@ def save_and_build(video_idx, video_key, frames_dir, out_dir, window_size, model
     extracted_frames = total_frames - window_size + 1
     extractor = model.extract_featuremap_logits(video_frame_dir, window_size)
     if not parallel:
-        extractor = tqdm(extractor, total = extracted_frames)
+        extractor = tqdm(extractor, total = extracted_frames, desc=f'{video_idx:5d}: {video_key} is being extracted')
 
-    print(f'{video_idx:5d}: {video_key} is being extracted')
     df = build_extractions_to_dataframe(extractor)
     save_feature_map_and_logits(out_dir, video_key, df)
+    if not parallel:
+        tqdm.write(f'{video_idx:5d}: {video_key} is done')
 
 def main():
     ''' Output the top 5 Kinetics classes predicted by the model '''
@@ -148,8 +149,8 @@ def main():
                   if os.path.isdir(os.path.join(frames_dir, dir))
                   if dir not in already_done_videos]
     
-    for video_key in already_done_videos:
-        print(f'{video_key} already exists')
+    if len(already_done_videos) > 0:
+        print(f'{len(already_done_videos)} extracted files already exists and skiped')
 
     tasks = ({
         'video_idx' : video_idx,

@@ -82,6 +82,7 @@ def get_startframes_endframes(key: str, table):
 
 if __name__ == '__main__':
     segment_table = convert_seconds_to_frame_indices_in_segments()
-    video_ids = segment_table.index.values
+    video_ids = segment_table.index.unique()
+    print(video_ids)
     # video_ids = ["fJ45W32t6h0"]
     logitDataset = generateDataset(video_ids, segment_table)

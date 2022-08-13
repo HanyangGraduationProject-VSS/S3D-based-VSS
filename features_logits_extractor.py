@@ -1,3 +1,4 @@
+from config import default_window_size
 import argparse
 import os
 from os.path import join as path_join
@@ -13,7 +14,7 @@ from model import S3D
 parser = argparse.ArgumentParser()
 parser.add_argument('--frameFolder', type=str, default="", help='Full path of the folder containing per-video frames directories (Default: "./frames")')
 parser.add_argument('--outFolder', type=str, default="", help='Output folder to store extracted parquet files (Default: "./features_logits")')
-parser.add_argument('--window_size', type=int, default=13, help='The number of frames to feed the model (Default: 13)')
+parser.add_argument('--window_size', type=int, default=default_window_size, help=f'The number of frames to feed the model (Default: {default_window_size})')
 parser.add_argument('--parallel', type=bool, default=False, help='[Experimental!] Use parallel processing (Default: False)')
 parser.add_argument('--parallel_jobs', type=int, default=8, help='# of jobs to do parallel processing (Default: 8)')
 
@@ -137,9 +138,9 @@ def main():
         print(args.outFolder)
         return
     
-    window_size = args.window_size
-    if args.window_size < 13:
-        print('window size must be at least 13')
+    default_window_size = args.window_size
+    if args.window_size < default_window_size:
+        print(f'window size must be at least {default_window_size}')
         return
 
     model = S3DInference(weight_file_path, class_names)
@@ -157,7 +158,7 @@ def main():
         'video_key' : video_key,
         'frames_dir' : frames_dir,
         'out_dir' : out_dir,
-        'window_size' : window_size,
+        'window_size' : default_window_size,
         'model' : model,
     } for video_idx, video_key in enumerate(video_keys, 1))
 

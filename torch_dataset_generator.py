@@ -28,11 +28,14 @@ class LogitDataset(Dataset):
 
 def generateDataset(video_ids, segment_table):
     logits, states = [], []
-    for video_id in video_ids:
-        if not checkParquetExist("v_"+video_id): continue
+    for idx, video_id in enumerate(video_ids):
+        if not checkParquetExist("v_"+video_id): 
+            print(f"passed {video_id}")
+            continue
         logits_states = videos_to_logits_states("v_"+video_id, segment_table)
         logits += logits_states[0]
         states += logits_states[1]
+        print(f"generated {video_id}")
     return LogitDataset(logits, states)
 
 
@@ -46,12 +49,9 @@ def videos_to_logits_states(key: str, table):
         logit = target_logits[i]
         if isAmbiguous(i, start_frames) or isAmbiguous(i, end_frames):
             continue
-
         logits.append(logit)
         if i in start_frames:
             states.append(WindowState.START)
-            print(f"START FRAMES {start_frames}")
-            print(f"index : {i}")
         elif i in end_frames:
             states.append(WindowState.END)
         else:
@@ -82,8 +82,6 @@ def get_startframes_endframes(key: str, table):
 
 if __name__ == '__main__':
     segment_table = convert_seconds_to_frame_indices_in_segments()
-    # video_ids = segment_table.index.values
-    video_ids = ["fJ45W32t6h0"]
+    video_ids = segment_table.index.values
+    # video_ids = ["fJ45W32t6h0"]
     logitDataset = generateDataset(video_ids, segment_table)
-
-    print(logitDataset.clip_states)

@@ -3,6 +3,7 @@ from config import default_window_size
 from torch.utils.data import Dataset
 from annotation import convert_seconds_to_frame_indices_in_segments
 from features_logits_loader import load_feature_map_and_logits
+from utils import checkParquetExist
 import pandas
 
 
@@ -28,6 +29,7 @@ class LogitDataset(Dataset):
 def generateDataset(video_ids, segment_table):
     logits, states = [], []
     for video_id in video_ids:
+        if not checkParquetExist("v_"+video_id): continue
         logits_states = videos_to_logits_states("v_"+video_id, segment_table)
         logits += logits_states[0]
         states += logits_states[1]
@@ -84,4 +86,4 @@ if __name__ == '__main__':
     video_ids = ["fJ45W32t6h0"]
     logitDataset = generateDataset(video_ids, segment_table)
 
-    # print(logitDataset.clip_states)
+    print(logitDataset.clip_states)

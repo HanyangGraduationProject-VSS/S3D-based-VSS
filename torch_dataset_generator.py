@@ -5,6 +5,7 @@ from annotation import convert_seconds_to_frame_indices_in_segments
 from features_logits_loader import load_feature_map_and_logits
 from utils import checkParquetExist
 import pandas
+import argparse
 
 
 class WindowState(Enum):
@@ -47,8 +48,8 @@ def videos_to_logits_states(key: str, table):
 
     for i in range(len(target_logits)):
         logit = target_logits[i]
-        if isAmbiguous(i, start_frames) or isAmbiguous(i, end_frames):
-            continue
+        # if isAmbiguous(i, start_frames) or isAmbiguous(i, end_frames):
+        #     continue
         logits.append(logit)
         if i in start_frames:
             states.append(WindowState.START)
@@ -81,8 +82,16 @@ def get_startframes_endframes(key: str, table):
 
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num_parquet_to_generate', type=int, default = 200, help ="the number of parquet to make logit")
+
+    args = parser.parse_args()
+    
+    num_parquet_to_use = args.num_parquet_to_generate
+
     segment_table = convert_seconds_to_frame_indices_in_segments()
-    video_ids = segment_table.index.unique()
+    video_ids = segment_table.index.unique()[:num_parquet_to_use]
     print(video_ids)
     # video_ids = ["fJ45W32t6h0"]
     logitDataset = generateDataset(video_ids, segment_table)

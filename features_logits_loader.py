@@ -4,8 +4,6 @@ import os
 import pandas as pd
 import numpy as np
 
-path_feature = path_join('.','feature_maps')
-print(path_feature)
 
 # feature_dirs = (dir for dir in os.listdir(path_feature)
 #                   if os.path.isdir(os.path.join(path_feature, dir)))

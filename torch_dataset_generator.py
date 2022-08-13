@@ -30,12 +30,12 @@ def generateDataset(video_ids, segment_table):
     logits, states = [], []
     for idx, video_id in enumerate(video_ids):
         if not checkParquetExist("v_"+video_id): 
-            print(f"passed {video_id}")
+            print(f"passed: index = {idx}, id =  {video_id}")
             continue
         logits_states = videos_to_logits_states("v_"+video_id, segment_table)
         logits += logits_states[0]
         states += logits_states[1]
-        print(f"generated {video_id}")
+        print(f"generated index = {idx}, id =  {video_id}")
     return LogitDataset(logits, states)
 
 

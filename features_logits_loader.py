@@ -14,7 +14,8 @@ import numpy as np
 #         print(torch.load(path_join(dir,feature)))
     
 def load_feature_map_and_logits(video_key: str):
-    path = path_join('.', 'features_logits', f'{video_key}.parquet')
+    # path = path_join('.', 'features_logits', f'{video_key}.parquet')
+    path = path_join('/content/drive/MyDrive/Activity200/parquets', f'{video_key}.parquet')
     parquet_pd = pd.read_parquet(path)
     parquet_pd.feature_map = \
         parquet_pd.feature_map.apply(lambda x : np.frombuffer(x,dtype = np.float32))

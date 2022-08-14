@@ -27,7 +27,7 @@ class LogitDataset(Dataset):
         return self.logits[index], self.clip_states[index]
 
 
-def generateDataset(video_ids, segment_table):
+def generateLogitDataset(video_ids, segment_table):
     logits, states = [], []
     for idx, video_id in enumerate(video_ids):
         if not checkParquetExist("v_"+video_id): 
@@ -38,7 +38,6 @@ def generateDataset(video_ids, segment_table):
         states += logits_states[1]
         print(f"generated index = {idx}, id =  {video_id}")
     return LogitDataset(logits, states)
-
 
 def videos_to_logits_states(key: str, table):
     target_logits = load_feature_map_and_logits(key).logits
@@ -58,6 +57,50 @@ def videos_to_logits_states(key: str, table):
         else:
             states.append(WindowState.NONE)
     return (logits, states)
+
+
+
+class FeaturemapDataset(Dataset):
+    def __init__(self, feature_maps, clip_states) -> None:
+        super().__init__()
+        self.feature_maps = feature_maps
+        self.clip_states = clip_states
+
+    def _len(self):
+        return len(self.feature_maps)
+
+    def __getitem__(self, index):
+        return self.feature_maps[index], self.clip_states[index]
+
+
+def generateFeatureMapDataset(video_ids, segment_table):
+    feature_maps, states = [], []
+    for idx, video_id in enumerate(video_ids):
+        if not checkParquetExist("v_"+video_id): 
+            continue
+        feature_maps_states = videos_to_feature_maps_states("v_"+video_id, segment_table)
+        feature_maps += feature_maps_states[0]
+        states += feature_maps_states[1]
+    return LogitDataset(feature_maps, states)
+
+def videos_to_feature_maps_states(key: str, table):
+    target_feature_maps = load_feature_map_and_logits(key).feature_map
+    feature_maps, states = [], []
+    # 로짓의 상태 판별하기
+    start_frames, end_frames = get_startframes_endframes(key, table)
+
+    for i in range(len(target_feature_maps)):
+        feature_map = target_feature_maps[i]
+        # if isAmbiguous(i, start_frames) or isAmbiguous(i, end_frames):
+        #     continue
+        feature_maps.append(feature_map)
+        if i in start_frames:
+            states.append(WindowState.START)
+        elif i in end_frames:
+            states.append(WindowState.END)
+        else:
+            states.append(WindowState.NONE)
+    return (feature_maps, states)
 
 
 def isAmbiguous(index, startOrEndFrames):
@@ -94,4 +137,7 @@ if __name__ == '__main__':
     video_ids = segment_table.index.unique()[:num_parquet_to_use]
     print(video_ids)
     # video_ids = ["fJ45W32t6h0"]
-    logitDataset = generateDataset(video_ids, segment_table)
+    logitDataset = generateLogitDataset(video_ids, segment_table)
+    featureMapDataset = generateFeatureMapDataset(video_ids, segment_table)
+    for item in featureMapDataset[:10]:
+        print(item)

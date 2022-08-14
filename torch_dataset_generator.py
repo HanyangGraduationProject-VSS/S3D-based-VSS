@@ -80,12 +80,7 @@ class DatasetGenerator():
             # if isAmbiguous(i, start_frames) or isAmbiguous(i, end_frames):
             #     continue
             feature_maps.append(feature_map)
-            if i in start_frames:
-                states.append(WindowState.START)
-            elif i in end_frames:
-                states.append(WindowState.END)
-            else:
-                states.append(WindowState.NONE)
+            states.append(self.window_state(i,start_frames, end_frames))
         return (feature_maps, states)
 
     def videos_to_logits_states(self, key: str):
@@ -99,12 +94,7 @@ class DatasetGenerator():
             # if isAmbiguous(i, start_frames) or isAmbiguous(i, end_frames):
             #     continue
             logits.append(logit)
-            if i in start_frames:
-                states.append(WindowState.START)
-            elif i in end_frames:
-                states.append(WindowState.END)
-            else:
-                states.append(WindowState.NONE)
+            states.append(self.window_state(i,start_frames, end_frames))
         return (logits, states)
 
     def get_startframes_endframes(self, key: str):
@@ -116,6 +106,12 @@ class DatasetGenerator():
             end_frames.append(end_frame)
 
         return start_frames, end_frames
+
+    def window_state(self, index, start_frames, end_frames):
+        if index in start_frames: return WindowState.START
+        if index in end_frames: return WindowState.END
+        return WindowState.NONE
+        
 
 
 def isAmbiguous(index, startOrEndFrames):

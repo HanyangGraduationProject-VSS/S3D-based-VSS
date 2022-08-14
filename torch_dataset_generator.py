@@ -52,7 +52,7 @@ class DatasetGenerator():
             if not checkParquetExist("v_"+video_id):
                 continue
             feature_maps_states = self.videos_to_feature_maps_states(
-                "v_"+video_id, self.segment_table)
+                "v_"+video_id)
             feature_maps += feature_maps_states[0]
             states += feature_maps_states[1]
         return FeatureMapDataset(feature_maps, states)

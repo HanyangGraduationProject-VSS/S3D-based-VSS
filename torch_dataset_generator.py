@@ -31,12 +31,10 @@ def generateLogitDataset(video_ids, segment_table):
     logits, states = [], []
     for idx, video_id in enumerate(video_ids):
         if not checkParquetExist("v_"+video_id): 
-            print(f"passed: index = {idx}, id =  {video_id}")
             continue
         logits_states = videos_to_logits_states("v_"+video_id, segment_table)
         logits += logits_states[0]
         states += logits_states[1]
-        print(f"generated index = {idx}, id =  {video_id}")
     return LogitDataset(logits, states)
 
 def videos_to_logits_states(key: str, table):
@@ -127,7 +125,7 @@ def get_startframes_endframes(key: str, table):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num_parquet_to_generate', type=int, default = 200, help ="the number of parquet to make logit")
+    parser.add_argument('--num_parquet_to_generate', type=int, default = 200, help ="the number of parquet to make logit and feature_map")
 
     args = parser.parse_args()
     
@@ -138,5 +136,5 @@ if __name__ == '__main__':
     
     logitDataset = generateLogitDataset(video_ids, segment_table)
     featureMapDataset = generateFeatureMapDataset(video_ids, segment_table)
-    for item in featureMapDataset[:10]:
-        print(item)
+    print(f"logit dataset len: {len(logitDataset)}")
+    print(f"featuremap dataset len: {len(featureMapDataset)}")

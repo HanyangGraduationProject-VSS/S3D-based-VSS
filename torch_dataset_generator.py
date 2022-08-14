@@ -46,7 +46,7 @@ class DatasetGenerator():
         self.segment_table = convert_seconds_to_frame_indices_in_segments()
         self.video_ids = self.segment_table.index.unique()
 
-    def generateFeatureMapDataset(self,num_to_gen, num_windows = 1):
+    def generate_feature_map_dataset(self,num_to_gen, num_windows = 1):
         print("##generating logit dataset##")
         feature_maps, states = [], []
         for idx, video_id in enumerate(self.video_ids[:num_to_gen]):
@@ -62,7 +62,7 @@ class DatasetGenerator():
             states += [*np.array(list(map(lambda s: s.value, feature_maps_states[1])))[indices_to_fetch]]
         return FeatureMapDataset(feature_maps, states)
 
-    def generateLogitDataset(self,num_to_gen, num_windows = 1):
+    def generate_logit_dataset(self,num_to_gen, num_windows = 1):
         print("##generating logit dataset##")
         logits, states = [], []
         for idx, video_id in enumerate(self.video_ids[:num_to_gen]):
@@ -144,7 +144,7 @@ if __name__ == '__main__':
 
     generator = DatasetGenerator()
 
-    logitDataset = generator.generateLogitDataset(num_parquet_to_use)
-    featureMapDataset = generator.generateFeatureMapDataset(num_parquet_to_use)
+    logitDataset = generator.generate_logit_dataset(num_parquet_to_use)
+    featureMapDataset = generator.generate_feature_map_dataset(num_parquet_to_use)
     print(f"logit dataset len: {len(logitDataset)}")
     print(f"featuremap dataset len: {len(featureMapDataset)}")

@@ -19,7 +19,7 @@ class LogitDataset(Dataset):
         self.logits = logits
         self.clip_states = clip_states
 
-    def _len(self):
+    def __len__(self):
         return len(self.logits)
 
     def __getitem__(self, index):
@@ -32,7 +32,7 @@ class FeatureMapDataset(Dataset):
         self.feature_maps = feature_maps
         self.clip_states = clip_states
 
-    def _len(self):
+    def __len__(self):
         return len(self.feature_maps)
 
     def __getitem__(self, index):
@@ -110,7 +110,6 @@ class DatasetGenerator():
     def get_startframes_endframes(self, key: str):
         result = self.segment_table .loc[[
             key[2:]]][["start_frame", "end_frame"]]
-        print(result)
         start_frames, end_frames = [], []
         for start_frame, end_frame in result.values:
             start_frames.append(start_frame)

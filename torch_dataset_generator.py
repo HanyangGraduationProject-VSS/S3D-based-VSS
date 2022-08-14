@@ -60,7 +60,7 @@ def videos_to_logits_states(key: str, table):
 
 
 
-class FeaturemapDataset(Dataset):
+class FeatureMapDataset(Dataset):
     def __init__(self, feature_maps, clip_states) -> None:
         super().__init__()
         self.feature_maps = feature_maps
@@ -81,7 +81,7 @@ def generateFeatureMapDataset(video_ids, segment_table):
         feature_maps_states = videos_to_feature_maps_states("v_"+video_id, segment_table)
         feature_maps += feature_maps_states[0]
         states += feature_maps_states[1]
-    return LogitDataset(feature_maps, states)
+    return FeatureMapDataset(feature_maps, states)
 
 def videos_to_feature_maps_states(key: str, table):
     target_feature_maps = load_feature_map_and_logits(key).feature_map
@@ -135,8 +135,7 @@ if __name__ == '__main__':
 
     segment_table = convert_seconds_to_frame_indices_in_segments()
     video_ids = segment_table.index.unique()[:num_parquet_to_use]
-    print(video_ids)
-    # video_ids = ["fJ45W32t6h0"]
+    
     logitDataset = generateLogitDataset(video_ids, segment_table)
     featureMapDataset = generateFeatureMapDataset(video_ids, segment_table)
     for item in featureMapDataset[:10]:

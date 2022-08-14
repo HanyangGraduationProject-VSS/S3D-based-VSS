@@ -186,16 +186,23 @@ def show_segment_distributions(annotation_dirpath, prefix):
     segment_df = pd.read_csv(path_join(annotation_dirpath, f"{prefix}_segments.csv"))
     print(segment_df['label'].value_counts().head(20))
 
+def get_annotations_dataframe(dataset_name = None):
+    if dataset_name is None:
+        return pd.read_csv(path_join('annotations', 'annotation_data_training.csv'))
+    elif type(dataset_name) == str:
+        if dataset_name == 'train':
+            return pd.read_csv(path_join('annotations', 'annotation_data_training.csv'))
+        elif dataset_name == 'valid':
+            return pd.read_csv(path_join('annotations', 'annotation_data_validation.csv'))
+    elif type(dataset_name) == pd.DataFrame:
+        return dataset_name
+    assert False, "Invalid dataset name"
+
 def convert_seconds_to_frame_indices_in_segments(to_fps = 8.0, segment_df = None, df = None):
     if segment_df is None:
         segment_df = pd.read_csv(path_join('annotations', 'annotation_data_segments.csv'))
-    if df is None:
-        df = pd.read_csv(path_join('annotations', 'annotation_data_training.csv'))
-    elif type(df) == str:
-        if df == 'train':
-            df = pd.read_csv(path_join('annotations', 'annotation_data_training.csv'))
-        elif df == 'valid':
-            df = pd.read_csv(path_join('annotations', 'annotation_data_validation.csv'))
+    
+    df = get_annotations_dataframe(df)
     
     new_df =  pd.DataFrame((
         (*v[:-2], *s) for v in df.values for s in segment_df.iloc[v[-2]:v[-2]+v[-1]].values

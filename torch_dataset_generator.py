@@ -38,7 +38,7 @@ class FeatureMapDataset(Dataset):
         return len(self.feature_maps)
 
     def __getitem__(self, index):
-        return self.feature_maps[index].reshape(1,32,32), self.clip_states[index]
+        return self.feature_maps[index].reshape(1,32,32), self.clip_states[index][0]
 
 
 class DatasetGenerator():

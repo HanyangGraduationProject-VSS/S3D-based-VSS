@@ -38,7 +38,7 @@ class FeatureMapDataset(Dataset):
         return len(self.feature_maps)
 
     def __getitem__(self, index):
-        return self.feature_maps[index], self.clip_states[index]
+        return self.feature_maps[index].reshape(1,32,32), self.clip_states[index]
 
 
 class DatasetGenerator():
@@ -47,7 +47,7 @@ class DatasetGenerator():
         self.video_ids = self.segment_table.index.unique()
 
     def generate_feature_map_dataset(self,num_to_gen, num_windows = 1):
-        print("##generating logit dataset##")
+        print("##generating feature map dataset##")
         feature_maps, states = [], []
         for idx, video_id in enumerate(self.video_ids[:num_to_gen]):
             print(idx)

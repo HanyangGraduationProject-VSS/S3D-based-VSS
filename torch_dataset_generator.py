@@ -41,7 +41,7 @@ class LogitDataset(Dataset):
         self.get_video_logits = get_video_logits
         self.get_segment_data = get_segment_data
 
-        for video_key in tqdm(self.available_video_keys, desc="generating feature map train dataset"):
+        for video_key in tqdm(self.available_video_keys, desc="generating logit dataset"):
             total_frames_in_the_video = self.get_video_num_of_frames(video_key)
             self.indices_partial_sum.append(self.indices_partial_sum[-1] + total_frames_in_the_video)
 
@@ -64,8 +64,9 @@ class LogitDataset(Dataset):
             ), 0, total_frames - 1
         )
         
-        states = np.array([int(window_state(idx, segments.start_frame, segments.end_frame).value) for idx in indices_to_fetch])
-        return cached_video[indices_to_fetch], states
+        state = int(window_state(frame_idx_in_the_video, segments.start_frame, segments.end_frame).value)
+        # states = np.array([int(window_state(idx, segments.start_frame, segments.end_frame).value) for idx in indices_to_fetch])
+        return cached_video[indices_to_fetch], state
 
     def get_video_data(self, video_key):
         if type(video_key) == int:
@@ -90,7 +91,7 @@ class FeatureMapDataset(Dataset):
         self.get_video_feature_map = get_video_feature_map
         self.get_segment_data = get_segment_data
 
-        for video_key in tqdm(self.available_video_keys, desc="generating feature map train dataset"):
+        for video_key in tqdm(self.available_video_keys, desc="generating feature map dataset"):
             total_frames_in_the_video = self.get_video_num_of_frames(video_key)
             self.indices_partial_sum.append(self.indices_partial_sum[-1] + total_frames_in_the_video)
 
@@ -114,8 +115,9 @@ class FeatureMapDataset(Dataset):
             ), 0, total_frames - 1
         )
         
-        states = np.array([int(window_state(idx, segments.start_frame, segments.end_frame).value) for idx in indices_to_fetch])
-        return cached_video[indices_to_fetch], states
+        state = int(window_state(frame_idx_in_the_video, segments.start_frame, segments.end_frame).value)
+        # states = np.array([int(window_state(idx, segments.start_frame, segments.end_frame).value) for idx in indices_to_fetch])
+        return cached_video[indices_to_fetch], state
 
     def get_video_data(self, video_key):
         if type(video_key) == int:
@@ -173,10 +175,10 @@ class DatasetGenerator():
         train_video_keys = []
         valid_video_keys = []
 
-        for video_key in tqdm(self.available_video_keys[:train_set_size], desc="generating feature map train dataset") :
+        for video_key in tqdm(self.available_video_keys[:train_set_size], desc="identifying logit train dataset") :
             train_video_keys.append(video_key)
         
-        for video_key in tqdm(self.available_video_keys[train_set_size:train_set_size+valid_set_size], desc="generating feature map validation dataset") :
+        for video_key in tqdm(self.available_video_keys[train_set_size:train_set_size+valid_set_size], desc="identifying logit validation dataset") :
             valid_video_keys.append(video_key)
         
         return LogitDataset(train_video_keys, num_windows, self.get_video_num_of_frames, self.get_video_logits, self.get_segment_data), \

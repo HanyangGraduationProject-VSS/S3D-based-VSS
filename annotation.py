@@ -194,6 +194,8 @@ def get_annotations_dataframe(dataset_name = None):
             return pd.read_csv(path_join('annotations', 'annotation_data_training.csv'))
         elif dataset_name == 'valid':
             return pd.read_csv(path_join('annotations', 'annotation_data_validation.csv'))
+        elif dataset_name == 'test':
+            return pd.read_csv(path_join('annotations', 'annotation_data_test.csv'))
     elif type(dataset_name) == pd.DataFrame:
         return dataset_name
     assert False, "Invalid dataset name"

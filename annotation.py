@@ -2,6 +2,10 @@ import json
 import pandas as pd
 from os.path import join as path_join
 import argparse
+import cv2
+from tqdm import tqdm
+from config import DATASET_DIRPATH
+import os
 
 # Sample structure of annotation_data
 # {
@@ -73,6 +77,31 @@ def get_annotated_videos(annotations):
 
     return video_df, segment_df
 
+def fetch_video_metatdata(video_path, video_name = None):
+    if video_name is None:
+        video_name = video_path.split("/")[-1]
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+      return None
+    else:
+      ret = (
+          str(video_name),
+          int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+          int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+          int(cap.get(cv2.CAP_PROP_FRAME_COUNT)),
+          float(cap.get(cv2.CAP_PROP_FPS))
+      )
+      cap.release()
+      return ret
+
+def get_video_info(video_files):
+  for video_file_entry in tqdm(video_files):
+      ret = fetch_video_metatdata(video_file_entry.path, video_file_entry.name)
+      if ret:
+        yield ret
+      else:
+        print(f"{video_file_entry.name} cannot be open")
+
 def save_annotation_data(path_to_annotation, path_to_save_parsed_annotation, prefix):
     annotations = get_annotations(path_to_annotation)
     video_df, segment_df = get_annotated_videos(annotations)
@@ -82,10 +111,50 @@ def save_annotation_data(path_to_annotation, path_to_save_parsed_annotation, pre
     validation_df = video_df[video_df['subset'] == 'validation']
     test_df = video_df[video_df['subset'] == 'testing']
 
+    cond = lambda item: item.is_file() and item.name.endswith('.mp4') or item.name.endswith('.mkv') or item.name.endswith('.webm')
+    
+    train_val_metatdata_df = None
+    test_metadata_df = None
+
+    train_val_dir_path = path_join(DATASET_DIRPATH, 'train_val')
+    if os.path.exists(train_val_dir_path):
+        train_val_video_files = [item for item in os.scandir(train_val_dir_path) if cond(item)]
+
+        if len(train_val_video_files) == 0:
+            print('no video files found in train_val directory')
+        else:
+            train_val_metatdata_df = pd.DataFrame(get_video_info(train_val_video_files), columns = ["video_name", "width", "height", "total_frames", "fps"])
+            train_val_metatdata_df = train_val_metatdata_df.convert_dtypes()
+            train_val_metatdata_df.video_name = train_val_metatdata_df.video_name.apply(lambda name: str(name).split('.')[0][2:])
+            train_val_metatdata_df.rename(columns = {'video_name':'video_id'}, inplace=True)
+    else:
+        print('train & validation set directory does not exist')
+
+    test_dir_path = path_join(DATASET_DIRPATH, 'test')
+    if os.path.exists(test_dir_path):
+        test_video_files = [item for item in os.scandir(test_dir_path) if cond(item)]
+
+        if len(test_video_files) == 0:
+            print('no video files found in test directory')
+        else:
+            test_metadata_df = pd.DataFrame(get_video_info(test_video_files), columns = ["video_name", "width", "height", "total_frames", "fps"])
+            test_metadata_df = test_metadata_df.convert_dtypes()
+            test_metadata_df.video_name = test_metadata_df.video_name.apply(lambda name: str(name).split('.')[0][2:])
+            test_metadata_df.rename(columns = {'video_name':'video_id'}, inplace=True)
+    else:
+        print('test set directory does not exist')
+
     # Save them as csvs
-    training_df.to_csv(path_join(path_to_save_parsed_annotation, f"{prefix}_training.csv"), index=False)
-    validation_df.to_csv(path_join(path_to_save_parsed_annotation, f"{prefix}_validation.csv"), index=False)
-    test_df.to_csv(path_join(path_to_save_parsed_annotation, f"{prefix}_test.csv"), index=False)
+    common_columns = ["video_id", "duration", "fps", "total_frames",
+                      "width", "height", "url", "annotation_record_id", "num_segments"]
+
+    if train_val_metatdata_df is not None:
+        pd.merge(train_val_metatdata_df, training_df, on='video_id')[common_columns].to_csv(path_join(path_to_save_parsed_annotation, f"{prefix}_training.csv"), index=False)
+        pd.merge(train_val_metatdata_df, validation_df, on='video_id')[common_columns].to_csv(path_join(path_to_save_parsed_annotation, f"{prefix}_validation.csv"), index=False)
+
+    if test_metadata_df is not None:
+        pd.merge(test_metadata_df, test_df, on='video_id')[common_columns].to_csv(path_join(path_to_save_parsed_annotation, f"{prefix}_test.csv"), index=False)
+    
     segment_df.to_csv(path_join(path_to_save_parsed_annotation, f"{prefix}_segments.csv"), index=False)
 
 def load_annotation_data(path_to_annotation, prefix):

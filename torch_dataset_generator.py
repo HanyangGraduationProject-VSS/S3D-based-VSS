@@ -76,6 +76,12 @@ class LogitDataset(Dataset):
         
         return data, labels, video_key
 
+    def get_labels(self):
+        labels = []
+        for video_key in self.video_ids:
+            labels.append(np.array(self.h5df[video_key].get('labels')))
+        return np.concatenate(labels)
+
 
 class FeatureMapDataset(Dataset):
     def __init__(self, video_keys, num_windows, h5df):
@@ -122,6 +128,12 @@ class FeatureMapDataset(Dataset):
         labels = np.array(self.h5df[video_key].get('labels'))
         
         return data, labels, video_key
+
+    def get_labels(self):
+        labels = []
+        for video_key in self.video_ids:
+            labels.append(np.array(self.h5df[video_key].get('labels')))
+        return np.concatenate(labels)
 
 class DatasetGenerator():
     DATASET_TYPE = Literal['train', 'test']

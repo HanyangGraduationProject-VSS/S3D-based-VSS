@@ -4,7 +4,7 @@ from os.path import join as path_join
 import argparse
 import cv2
 from tqdm import tqdm
-from config import DATASET_DIRPATH
+from config import DATASET_DIRPATH, H5DF_DIRPATH
 import os
 
 # Sample structure of annotation_data
@@ -188,14 +188,12 @@ def show_segment_distributions(annotation_dirpath, prefix):
 
 def get_annotations_dataframe(dataset_name = None):
     if dataset_name is None:
-        return pd.read_csv(path_join('annotations', 'annotation_data_training.csv'))
+        return pd.read_csv(path_join(H5DF_DIRPATH, 'annotation_train_set.csv'))
     elif type(dataset_name) == str:
         if dataset_name == 'train':
-            return pd.read_csv(path_join('annotations', 'annotation_data_training.csv'))
-        elif dataset_name == 'valid':
-            return pd.read_csv(path_join('annotations', 'annotation_data_validation.csv'))
+            return pd.read_csv(path_join(H5DF_DIRPATH, 'annotation_train_set.csv'))
         elif dataset_name == 'test':
-            return pd.read_csv(path_join('annotations', 'annotation_data_test.csv'))
+            return pd.read_csv(path_join(H5DF_DIRPATH, 'annotation_test_set.csv'))
     elif type(dataset_name) == pd.DataFrame:
         return dataset_name
     assert False, "Invalid dataset name"

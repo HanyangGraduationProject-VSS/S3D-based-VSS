@@ -2,6 +2,7 @@ import argparse
 import os
 from bisect import bisect_right
 from enum import Enum
+from functools import lru_cache
 
 import h5py
 import numpy as np
@@ -53,8 +54,7 @@ class LogitDataset(Dataset):
         total_frames = self.indices_partial_sum[video_idx + 1] - self.indices_partial_sum[video_idx]
         assert total_frames > 0, f"the total frame of video {video_id} is 0"
         
-        data = np.array(self.h5df[video_id].get('logits'))
-        labels = np.array(self.h5df[video_id].get('labels'))
+        data, labels, _ = self.get_video_data(video_id)
         
         current_frame_idx = index - self.indices_partial_sum[video_idx]
         indices_to_fetch = np.clip(
@@ -66,6 +66,7 @@ class LogitDataset(Dataset):
         
         return data[indices_to_fetch], labels[indices_to_fetch]
 
+    @lru_cache(maxsize=1000)
     def get_video_data(self, video_key):
         if type(video_key) == int:
             video_idx = int(video_key)
@@ -106,8 +107,7 @@ class FeatureMapDataset(Dataset):
         total_frames = self.indices_partial_sum[video_idx + 1] - self.indices_partial_sum[video_idx]
         assert total_frames > 0, f"the total frame of video {video_id} is 0"
         
-        data = np.array(self.h5df[video_id].get('feature_map'))
-        labels = np.array(self.h5df[video_id].get('labels'))
+        data, labels, _ = self.get_video_data(video_id)
         
         current_frame_idx = index - self.indices_partial_sum[video_idx]
         indices_to_fetch = np.clip(
@@ -119,6 +119,7 @@ class FeatureMapDataset(Dataset):
         
         return data[indices_to_fetch], labels[indices_to_fetch]
 
+    @lru_cache(maxsize=1000)
     def get_video_data(self, video_key):
         if type(video_key) == int:
             video_idx = int(video_key)
@@ -143,7 +144,7 @@ class DatasetGenerator():
             raise FileNotFoundError(f"{h5df_path} does not exist")
 
         self.h5df_path = h5df_path
-        self.h5df = h5py.File(self.h5df_path, 'r')
+        self.h5df = h5py.File(self.h5df_path, 'r', rdcc_nbytes=4*1024**2)
 
         self.dataset = get_annotations_dataframe(dataset_type).set_index("video_id")
         self.available_video_keys = []

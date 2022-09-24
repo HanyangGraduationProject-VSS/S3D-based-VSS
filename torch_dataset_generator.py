@@ -32,17 +32,18 @@ def get_state(current_frame_idx, start_frames_set, end_frames_set):
 
 
 class LogitDataset(Dataset):
-    def __init__(self, video_keys, num_windows, h5df):
+    def __init__(self, video_keys, num_windows, hop_count, h5df):
         super().__init__()
 
         self.num_windows = num_windows
         self.video_ids = video_keys[:]
         self.indices_partial_sum = [0]
+        self.hop_count = hop_count
         self.h5df = h5df
 
         for video_key in tqdm(self.video_ids, desc="generating logits dataset"):
             total_frames_in_the_video = self.h5df[video_key]['labels'].shape[0]
-            self.indices_partial_sum.append(self.indices_partial_sum[-1] + total_frames_in_the_video)
+            self.indices_partial_sum.append(self.indices_partial_sum[-1] + (total_frames_in_the_video + self.hop_count - 1) // self.hop_count)
 
     def __len__(self) -> int:
         return self.indices_partial_sum[-1] - self.indices_partial_sum[0]
@@ -62,7 +63,7 @@ class LogitDataset(Dataset):
                 current_frame_idx - self.num_windows // 2,
                 current_frame_idx - self.num_windows // 2 + self.num_windows
             ), 0, total_frames - 1
-        )
+        ) * self.hop_count
         
         return data[indices_to_fetch], labels[indices_to_fetch]
 
@@ -85,17 +86,18 @@ class LogitDataset(Dataset):
 
 
 class FeatureMapDataset(Dataset):
-    def __init__(self, video_keys, num_windows, h5df):
+    def __init__(self, video_keys, num_windows, hop_count, h5df):
         super().__init__()
 
         self.num_windows = num_windows
         self.video_ids = video_keys[:]
         self.indices_partial_sum = [0]
+        self.hop_count = hop_count
         self.h5df = h5df
 
         for video_key in tqdm(self.video_ids, desc="generating feature map dataset"):
             total_frames_in_the_video = self.h5df[video_key]['labels'].shape[0]
-            self.indices_partial_sum.append(self.indices_partial_sum[-1] + total_frames_in_the_video)
+            self.indices_partial_sum.append(self.indices_partial_sum[-1] + (total_frames_in_the_video + self.hop_count - 1) // self.hop_count)
 
     def __len__(self) -> int:
         return self.indices_partial_sum[-1] - self.indices_partial_sum[0]
@@ -115,7 +117,7 @@ class FeatureMapDataset(Dataset):
                 current_frame_idx - self.num_windows // 2,
                 current_frame_idx - self.num_windows // 2 + self.num_windows
             ), 0, total_frames - 1
-        )
+        ) * self.hop_count
         
         return data[indices_to_fetch], labels[indices_to_fetch]
 
@@ -161,7 +163,7 @@ class DatasetGenerator():
             self.available_video_keys.append(video_id)
         tqdm.write(f"Total {len(self.available_video_keys)} videos were read")
 
-    def generate_feature_map_dataset(self, dataset_size = None, num_windows = 1):
+    def generate_feature_map_dataset(self, dataset_size = None, num_windows = 1, hop_count = 1):
         if dataset_size is None:
             dataset_size = len(self.available_video_keys)
 
@@ -173,9 +175,9 @@ class DatasetGenerator():
 
         video_keys = self.available_video_keys[:dataset_size]
 
-        return FeatureMapDataset(video_keys, num_windows, self.h5df)
+        return FeatureMapDataset(video_keys, num_windows, hop_count, self.h5df)
 
-    def generate_logit_dataset(self, dataset_size = None, num_windows = 1):
+    def generate_logit_dataset(self, dataset_size = None, num_windows = 1, hop_count = 1):
         if dataset_size is None:
             dataset_size = len(self.available_video_keys)
 
@@ -187,7 +189,7 @@ class DatasetGenerator():
 
         video_keys = self.available_video_keys[:dataset_size]
 
-        return LogitDataset(video_keys, num_windows, self.h5df)
+        return LogitDataset(video_keys, num_windows, hop_count, self.h5df)
 
 
 def isAmbiguous(index, startOrEndFrames):

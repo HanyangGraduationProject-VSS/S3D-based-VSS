@@ -71,7 +71,7 @@ class LogitDataset(Dataset):
         
         return data[indices_to_fetch], labels[indices_to_fetch]
 
-    @lru_cache(maxsize=1000)
+    @lru_cache(maxsize=3800)
     def get_video_data(self, video_key):
         if type(video_key) == int:
             video_idx = int(video_key)
@@ -125,7 +125,7 @@ class FeatureMapDataset(Dataset):
         
         return data[indices_to_fetch], labels[indices_to_fetch]
 
-    @lru_cache(maxsize=1000)
+    @lru_cache(maxsize=3800)
     def get_video_data(self, video_key):
         if type(video_key) == int:
             video_idx = int(video_key)

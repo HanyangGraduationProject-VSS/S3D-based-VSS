@@ -15,20 +15,24 @@ from config import H5DF_DIRPATH, default_window_size
 
 
 class WindowState(Enum):
-    START = 0
-    END = 1
-    NONE = 2
+    ACTIVITY = 1
+    NONE = 0
 
 
-def window_state(index, start_frames_set, end_frames_set):
-    if index in start_frames_set:
-        return WindowState.START
-    if index in end_frames_set:
-        return WindowState.END
+def window_state(index, interval_list):
+    final_end = interval_list[-1][1]
+    if final_end < index: 
+      return WindowState.NONE 
+
+    for interval in interval_list:
+      start, end = interval
+    
+      if start <= index <= end: 
+        return WindowState.ACTIVITY
     return WindowState.NONE
 
-def get_state(current_frame_idx, start_frames_set, end_frames_set):
-    return int(window_state(current_frame_idx, start_frames_set, end_frames_set).value)
+def get_state(current_frame_idx, intervals):
+  return int(window_state(current_frame_idx, intervals).value)
 
 
 class LogitDataset(Dataset):

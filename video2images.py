@@ -103,7 +103,7 @@ class VideoToImages:
         @args file: path to the file
         @return: True if the file is a valid video file, False otherwise.
         '''
-        name, ext = file.split(' ')
+        name, ext = file.split('.')
         
         ext: str = ext.lower()
         return ext in {'mp4','mkv', 'webm'} and name[2:] in self.video_set

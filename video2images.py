@@ -25,7 +25,7 @@ class VideoToImages:
 
         self.config = config
         self.files = [file for file in os.listdir(
-            self.video_folder) if VideoToImages.is_valid_video_file(file)]
+            self.video_folder) if self.is_valid_video_file(file)]
         self.out_folder = config.frame_folder
         self.outfps = config.fps
         self.video_set = config.video_set

@@ -78,13 +78,14 @@ class VideoToImages:
                 vidcap.set(cv2.CAP_PROP_FPS, self.outfps)
 
                 # Estimating total frames to extract
-                frameCount = math.ceil((frameCount / sourcefps) * self.outfps)
-                skip = 1000 * math.floor(1000 / (self.outfps * 1000))
+                frameCount = math.floor((frameCount / sourcefps) * self.outfps)
+                skip = int(1000 / self.outfps)
 
             success, image = vidcap.read()
             for i in tqdm(range(frameCount)):
                 if not success:
                     break
+                
                 if skip > 0:
                     vidcap.set(cv2.CAP_PROP_POS_MSEC, (i * skip))
 

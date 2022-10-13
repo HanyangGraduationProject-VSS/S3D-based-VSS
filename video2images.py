@@ -24,11 +24,12 @@ class VideoToImages:
             raise RuntimeError('Invalid path: %s' % self.video_folder)
 
         self.config = config
-        self.files = [file for file in os.listdir(
-            self.video_folder) if self.is_valid_video_file(file)]
+    
         self.out_folder = config.frame_folder
         self.outfps = config.fps
         self.video_set = config.video_set
+        self.files = [file for file in os.listdir(
+            self.video_folder) if self.is_valid_video_file(file)]
 
         # if len(config.outFolder) == 0:
         #     self.outFolder = os.path.join(".", "frames")

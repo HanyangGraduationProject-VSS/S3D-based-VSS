@@ -9,19 +9,13 @@ import pandas as pd
 
 
 class Config:
-    def __init__(self, video_folder, csv_path, frame_folder) -> None:
+    def __init__(self, video_folder, csv_path, frame_folder, start_idx) -> None:
         self.video_folder = video_folder
         self.frame_folder = frame_folder
         self.fps = 8
         self.img_size = 224
         self.video_set = set(pd.read_csv(csv_path)['video_id'].to_list())
-
-def count_files(dir_path: str):
-    count = 0
-    for path in os.scandir(dir_path):
-        if path.is_file():
-            count += 1
-    return count
+        self.start_idx = start_idx
 
 class VideoToImages:
     def __init__(self, config: Config):
@@ -36,6 +30,7 @@ class VideoToImages:
         self.video_set = config.video_set
         self.files = [file for file in os.listdir(
             self.video_folder) if self.is_valid_video_file(file)]
+        self.start_idx = config.start_idx
 
         # if len(config.outFolder) == 0:
         #     self.outFolder = os.path.join(".", "frames")
@@ -63,12 +58,17 @@ class VideoToImages:
     def run(self):
         print("Starting conversion")
         for idx, file in enumerate(self.files):
+            # Skip already processed videos
+            if idx < self.start_idx:
+                continue
+
             input_video_path = os.path.join(self.video_folder, file)
             output_frames_dirpath = os.path.join(
                 self.out_folder, ''.join(os.path.basename(file).split(".")[:-1]))
 
             vidcap = cv2.VideoCapture(input_video_path)
             sourcefps = vidcap.get(cv2.CAP_PROP_FPS)
+            
             # If the fps requested is bigger than source video fps, then use source fps
             if self.outfps > sourcefps:
                 self.outfps = 0
@@ -80,12 +80,6 @@ class VideoToImages:
             # Create the per video output directory if it does not exist
             if not os.path.exists(output_frames_dirpath):
                 os.mkdir(output_frames_dirpath)
-            else:
-                # If the video has already been processed, skip it
-                num_frames_already_generated = count_files(output_frames_dirpath)
-                if num_frames_already_generated == math.floor((frameCount / sourcefps) * self.outfps):
-                    print(f"Video {file} already processed, skipping")
-                    continue
 
             skip = 0
             if self.outfps > 0:
@@ -123,6 +117,6 @@ class VideoToImages:
         return ext in {'mp4','mkv', 'webm'} and name[2:] in self.video_set
 
 
-def convert(video_folder: str, csv_path: str, frame_folder: str):
-    config = Config(video_folder, csv_path, frame_folder)
+def convert(video_folder: str, csv_path: str, frame_folder: str, start_idx: int = 0):
+    config = Config(video_folder, csv_path, frame_folder, start_idx)
     VideoToImages(config)
